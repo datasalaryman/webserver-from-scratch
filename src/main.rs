@@ -1,23 +1,24 @@
-use std::{net::{TcpListener, TcpStream}, io::{Write, Read, BufRead, BufReader}};
+use std::{os::fd::RawFd, str::FromStr};
+use nix::sys::socket::{
+   AddressFamily, Backlog, MsgFlags, SockFlag, SockType, SockaddrIn, accept, bind, listen, recv, send, setsockopt, socket, sockopt::ReuseAddr
+};
+use nix::unistd::{close};
+use std::os::fd::AsRawFd;
+//use std::os::fd::AsFd;
 
-fn handle_client(mut stream: TcpStream) -> std::io::Result<()> {
-    // enforces read within a nested block so that stream is preserved
-    // TODO: figure how how to do a read from stream without cloning or
-    // creating a nested block
-    { 
-        let reader = BufReader::new(&stream); 
-        let lines = reader.lines(); 
+fn handle_client(fd: RawFd) {
+    
+    let mut buf = [0u8; 1024];
+    let n = recv(fd, &mut buf, MsgFlags::empty()).unwrap();
 
-        println!("===REQUEST===");
-
-        for line in lines {
-            let line_result = line?; 
-            println!("{}", line_result);
-            if line_result.is_empty() {
-                break;  // headers done
-            }
-        }
+    if n == 0 {
+        println!("Message empty"); 
     }
+
+    
+    println!("===REQUEST==="); 
+
+    println!("{}", String::from_utf8_lossy(&buf[..n]));
 
     println!("\r\n");
 
@@ -25,31 +26,31 @@ fn handle_client(mut stream: TcpStream) -> std::io::Result<()> {
 
     let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 37\r\n\r\n<html><body>Hello World</body></html>";
 
-    println!("{}", response); 
+    println!("{}", response);
 
-    stream.write_all(response.as_bytes())?;
-    stream.flush()?;
-
-    Ok (())
+    send(fd, response.as_bytes().try_into().unwrap(), MsgFlags::empty()); 
 
 }
 
-fn main() -> std::io::Result<()> {
-    // loop {
-    //     println!("Hello, world!");
-    // }
-    let listener = TcpListener::bind("0.0.0.0:3000")?;
+fn main() {
+    let sock_addr = SockaddrIn::from_str("0.0.0.0:3000").unwrap(); 
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                if let Err(e) = handle_client(stream) {
-                    eprintln!("Error: {}", e);
-                }
-            }
-            Err(e) => eprintln!("Accept error: {}", e),
-        }
+    let fd = socket(AddressFamily::Inet, SockType::Stream, SockFlag::empty(), None).unwrap();
+
+    setsockopt(&fd, ReuseAddr, &true).unwrap();
+
+    bind(fd.as_raw_fd(), &sock_addr).unwrap();
+
+    listen(&fd, Backlog::new(128).unwrap()).unwrap();
+
+    loop {
+        let client_fd = accept(fd.as_raw_fd()).unwrap();
+
+        println!("IPV4 Address: {:?}, Port: {:?}", &sock_addr.ip(), &sock_addr.port());
+        println!("File descriptor: {:?}", &fd);
+        handle_client(client_fd);
+
+        close(client_fd).unwrap(); 
     }
 
-    Ok(())
 }
