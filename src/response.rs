@@ -1,3 +1,4 @@
+use std::fs;
 use crate::request::{Request}; 
 
 #[derive(Debug)]
@@ -67,12 +68,12 @@ impl<'a> TryFrom<&Request<'a>> for Response<'a> {
 
 impl<'a> std::fmt::Display for Response<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let success_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 37\r\n\r\n<html><body>Hello World</body></html>";
-        // write!(f, "{} {} OK\r\n{}", 
-        //    self.version, 
-        //    self.status, 
-        //    self.body
-        // )
-        write!(f, "{}", String::from(success_response)) 
+        let index = fs::read_to_string("assets/index.html").unwrap();
+        write!(f, "{} {} OK\r\nContent-Type: text/html\r\nContent-Length: {:?}\r\n\r\n{}", 
+            self.version, 
+            self.status,
+            index.len(), 
+            index
+        )
     }
 }
