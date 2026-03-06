@@ -60,8 +60,8 @@ pub fn run() {
     loop {
         let client_fd = accept(fd.as_raw_fd()).unwrap();
 
-        println!("IPV4 Address: {:?}, Port: {:?}", &sock_addr.ip(), &sock_addr.port());
-        println!("File descriptor: {:?}", &fd);
+        // println!("IPV4 Address: {:?}, Port: {:?}", &sock_addr.ip(), &sock_addr.port());
+        // println!("File descriptor: {:?}", &fd);
         handle_client(client_fd);
 
         close(client_fd).unwrap(); 
