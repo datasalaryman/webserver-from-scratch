@@ -74,7 +74,7 @@ impl<'a> TryFrom<&'a str> for Request<'a> {
         let mut headers_lines: Vec<&str> = Vec::new();
         for (i, line) in request_lines.iter().enumerate() {
             if line.is_empty() {
-                headers_lines = request_lines[1..i-1].to_vec();
+                headers_lines = request_lines[1..i].to_vec();
                 break;
             } 
         }
